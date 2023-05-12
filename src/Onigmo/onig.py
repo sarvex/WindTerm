@@ -11,6 +11,7 @@ Onigmo DLL (onig.dll, libonig.so, etc.) must be placed in the
 default search path. The default search path depends on the system.
 """
 
+
 import ctypes
 import os
 import sys
@@ -107,7 +108,7 @@ class OnigErrorInfo(ctypes.Structure):
 
 # load the DLL or the shared library
 
-if os.name in ("nt", "ce"):
+if os.name in {"nt", "ce"}:
     _libname = "onig.dll"
 elif sys.platform == "cygwin":
     _libname = "libonig.dll"

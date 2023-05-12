@@ -51,11 +51,11 @@ def cc_to_cb(s, enc, cc):
 def print_result(result, pattern, file=None):
     if not file:
         file = sys.stdout
-    print(result + ": ", end='', file=file)
+    print(f"{result}: ", end='', file=file)
     try:
         print(pattern, file=file)
     except UnicodeEncodeError as e:
-        print('(' + str(e) + ')')
+        print(f'({str(e)})')
 
 def xx(pattern, target, s_from, s_to, mem, not_match):
     global nerror
@@ -90,8 +90,7 @@ def xx(pattern, target, s_from, s_to, mem, not_match):
     if r != 0:
         onig.onig_error_code_to_str(msg, r, byref(einfo))
         nerror += 1
-        print_result("ERROR", "%s (/%s/ '%s')" % (msg.value, pattern, target),
-                file=sys.stderr)
+        print_result("ERROR", f"{msg.value} (/{pattern}/ '{target}')", file=sys.stderr)
         return
 
     r = onig.onig_search(reg, targetp.getptr(), targetp.getptr(-1),
@@ -100,31 +99,29 @@ def xx(pattern, target, s_from, s_to, mem, not_match):
     if r < onig.ONIG_MISMATCH:
         onig.onig_error_code_to_str(msg, r)
         nerror += 1
-        print_result("ERROR", "%s (/%s/ '%s')" % (msg.value, pattern, target),
-                file=sys.stderr)
+        print_result("ERROR", f"{msg.value} (/{pattern}/ '{target}')", file=sys.stderr)
         return
 
     if r == onig.ONIG_MISMATCH:
         if not_match:
             nsucc += 1
-            print_result("OK(N)", "/%s/ '%s'" % (pattern, target))
+            print_result("OK(N)", f"/{pattern}/ '{target}'")
         else:
             nfail += 1
-            print_result("FAIL", "/%s/ '%s'" % (pattern, target))
+            print_result("FAIL", f"/{pattern}/ '{target}'")
+    elif not_match:
+        nfail += 1
+        print_result("FAIL(N)", f"/{pattern}/ '{target}'")
     else:
-        if not_match:
-            nfail += 1
-            print_result("FAIL(N)", "/%s/ '%s'" % (pattern, target))
+        start = region[0].beg[mem]
+        end = region[0].end[mem]
+        if (start == s_from) and (end == s_to):
+            nsucc += 1
+            print_result("OK", f"/{pattern}/ '{target}'")
         else:
-            start = region[0].beg[mem]
-            end = region[0].end[mem]
-            if (start == s_from) and (end == s_to):
-                nsucc += 1
-                print_result("OK", "/%s/ '%s'" % (pattern, target))
-            else:
-                nfail += 1
-                print_result("FAIL", "/%s/ '%s' %d-%d : %d-%d" % (pattern, target,
-                        s_from, s_to, start, end))
+            nfail += 1
+            print_result("FAIL", "/%s/ '%s' %d-%d : %d-%d" % (pattern, target,
+                    s_from, s_to, start, end))
     onig.onig_free(reg)
 
 def x2(pattern, target, s_from, s_to):
@@ -165,11 +162,7 @@ def main():
         encoding = onig_encoding[0].name.decode()
 
     # set encoding of stdout/stderr
-    if len(sys.argv) > 2:
-        outenc = sys.argv[2]
-    else:
-        outenc = locale.getpreferredencoding()
-
+    outenc = sys.argv[2] if len(sys.argv) > 2 else locale.getpreferredencoding()
     def get_text_writer(fileno, **kwargs):
         kw = dict(kwargs)
         kw.setdefault('errors', 'backslashreplace')
@@ -952,7 +945,6 @@ def main():
     n("x.*?\\Z$", "x\r\ny")
     x2("x.*?\\Z$", "x\n", 0, 1)
     x2("x.*?\\Z$", "x\r\n", 0, 2)   # \Z will match between \r and \n, if
-                                    # ONIG_OPTION_NEWLINE_CRLF isn't specified.
     x2("(?<=fo).*", "foo", 2, 3)
     x2("(?m)(?<=fo).*", "foo", 2, 3)
     x2("(?m)(?<=fo).+", "foo", 2, 3)
